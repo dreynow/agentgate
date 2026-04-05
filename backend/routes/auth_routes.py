@@ -152,15 +152,28 @@ async def get_vault_token(connection: str, request: Request):
         return {"connection": connection, "token": external_token}
     except Exception as e:
         error_msg = str(e)
-        # Provide actionable guidance
-        if "refresh_token_not_found" in error_msg:
-            raise HTTPException(
-                status_code=400,
-                detail=f"GitHub account not connected to Token Vault. Go to Connections page and click 'Connect GitHub' first.",
-            )
+        # Return the raw Auth0 error for debugging
         raise HTTPException(
-            status_code=400, detail=f"Token Vault exchange failed: {error_msg}"
+            status_code=400,
+            detail=f"Token Vault exchange failed: {error_msg}",
         )
+
+
+@router.get("/debug")
+async def debug(request: Request):
+    """Debug session state - shows what tokens we have."""
+    session_id = request.cookies.get("agentgate_session", "")
+    session = user_sessions.get(session_id)
+    if not session:
+        return {"error": "no session"}
+    rt = session.get("refresh_token", "")
+    return {
+        "has_session": True,
+        "has_refresh_token": bool(rt),
+        "refresh_token_prefix": rt[:20] + "..." if rt else "",
+        "connected_accounts": session.get("connected_accounts", []),
+        "user_email": session.get("user", {}).get("email", ""),
+    }
 
 
 @router.get("/logout")
