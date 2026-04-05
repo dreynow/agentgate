@@ -9,8 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import FileResponse
 from config import settings
 from routes.auth_routes import router as auth_router
 from routes.connections import router as connections_router
@@ -20,7 +19,6 @@ from routes.agents_routes import router as agents_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize Kanoniv root key on startup
     from auth.kanoniv import ensure_root_key
     ensure_root_key()
     yield
@@ -33,7 +31,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS - allow frontend dev server + production same-origin
 origins = [settings.frontend_url, "http://localhost:5173", "http://localhost:5174"]
 if settings.app_url not in origins:
     origins.append(settings.app_url)
@@ -46,7 +43,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API routes
+# API routes (all under /api or /auth)
 app.include_router(auth_router)
 app.include_router(connections_router)
 app.include_router(delegations_router)
@@ -55,39 +52,35 @@ app.include_router(agents_router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "agentgate"}
+    return {"status": "ok", "service": "agentgate", "version": "0.1.2"}
 
 
-# Production: serve frontend static files from FastAPI
+# Production: serve frontend
 _static_dir = settings.static_dir or os.environ.get("STATIC_DIR", "")
 if _static_dir and os.path.isdir(_static_dir):
     _index_html = os.path.join(_static_dir, "index.html")
     print(f"[STATIC] Serving frontend from {_static_dir}")
 
-    # Mount /assets for JS/CSS bundles
+    # Explicit SPA page routes - serve index.html for each frontend route
+    @app.get("/")
+    @app.get("/connections")
+    @app.get("/delegations")
+    @app.get("/agents")
+    @app.get("/activity")
+    async def spa_pages():
+        return FileResponse(_index_html)
+
+    # Mount /assets for JS/CSS bundles (checked after routes)
     _assets_dir = os.path.join(_static_dir, "assets")
     if os.path.isdir(_assets_dir):
         app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
 
-    # SPA fallback: any 404 on a non-API path serves index.html
-    @app.exception_handler(StarletteHTTPException)
-    async def spa_fallback(request, exc):
-        if exc.status_code == 404:
-            path = request.url.path
-            # Don't intercept API or auth 404s
-            if path.startswith(("/api/", "/auth/", "/health")):
-                return JSONResponse(
-                    {"detail": exc.detail or "Not found"}, status_code=404
-                )
-            # Try serving a static file first
-            file_path = os.path.join(_static_dir, path.lstrip("/"))
-            if os.path.isfile(file_path):
-                return FileResponse(file_path)
-            # SPA client-side route - serve index.html
-            return FileResponse(_index_html)
-        # Re-raise non-404 HTTP exceptions as JSON
-        return JSONResponse(
-            {"detail": exc.detail or "Error"}, status_code=exc.status_code
-        )
+    # Serve other static files (favicon, etc.)
+    @app.get("/{file_path:path}")
+    async def static_fallback(file_path: str):
+        full = os.path.join(_static_dir, file_path)
+        if os.path.isfile(full):
+            return FileResponse(full)
+        return FileResponse(_index_html)
 else:
     print(f"[STATIC] No static dir found (STATIC_DIR={_static_dir!r})")
