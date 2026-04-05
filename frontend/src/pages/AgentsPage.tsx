@@ -44,6 +44,18 @@ export const AgentsPage: React.FC = () => {
       return;
     }
 
+    // Client-side scope check - instant BLOCKED for unauthorized actions
+    if (!delegation.scopes.includes(action)) {
+      setLastResult({
+        success: false,
+        action,
+        agent: agentName,
+        error: `Action "${action}" not in delegation scope. Delegated scopes: [${delegation.scopes.join(', ')}]`,
+        decision: 'BLOCKED',
+      });
+      return;
+    }
+
     if (!activeToken) {
       setLastResult({
         success: false,
