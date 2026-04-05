@@ -151,11 +151,20 @@ async def get_vault_token(connection: str, request: Request):
         )
         return {"connection": connection, "token": external_token}
     except Exception as e:
-        error_msg = str(e)
-        # Return the raw Auth0 error for debugging
+        # Fallback: try direct user lookup via Management API
+        user_sub = session.get("user", {}).get("sub", "")
+        if user_sub and connection == "github":
+            try:
+                token = await auth0_client.get_github_token_for_user(user_sub)
+                return {"connection": connection, "token": token}
+            except Exception as e2:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Token Vault and Management API both failed: {e} | {e2}",
+                )
         raise HTTPException(
             status_code=400,
-            detail=f"Token Vault exchange failed: {error_msg}",
+            detail=f"Token Vault exchange failed: {e}",
         )
 
 
