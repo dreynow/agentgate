@@ -6,9 +6,10 @@ Kanoniv Agent Auth secures the authority.
 
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from config import settings
 from routes.auth_routes import router as auth_router
 from routes.connections import router as connections_router
@@ -60,8 +61,21 @@ async def health():
 _static_dir = settings.static_dir or os.environ.get("STATIC_DIR", "")
 if _static_dir and os.path.isdir(_static_dir):
     print(f"[STATIC] Serving frontend from {_static_dir}")
-    # Mount the entire dist as a static site with html=True (serves index.html for dirs)
-    # This MUST be last - FastAPI matches routes before mounts, so API routes take priority
-    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="spa")
+    _index_html = os.path.join(_static_dir, "index.html")
+
+    # Mount /assets for JS/CSS bundles
+    _assets_dir = os.path.join(_static_dir, "assets")
+    if os.path.isdir(_assets_dir):
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
+
+    # SPA catch-all: serve index.html for any non-API path
+    @app.get("/{full_path:path}")
+    async def serve_spa(request: Request, full_path: str):
+        # Try to serve an actual file first (e.g. favicon.ico)
+        file_path = os.path.join(_static_dir, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # Otherwise serve index.html for client-side routing
+        return FileResponse(_index_html)
 else:
     print(f"[STATIC] No static dir found (STATIC_DIR={_static_dir!r})")
