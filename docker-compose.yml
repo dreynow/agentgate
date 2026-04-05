@@ -1,0 +1,17 @@
+services:
+  agentgate:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - backend/.env
+    environment:
+      - STATIC_DIR=/app/static
+      - APP_URL=http://localhost:8000
+      - FRONTEND_URL=http://localhost:8000
+      - KANONIV_ROOT_KEY_PATH=/root/.kanoniv/root.key
+    volumes:
+      - kanoniv-keys:/root/.kanoniv
+
+volumes:
+  kanoniv-keys:

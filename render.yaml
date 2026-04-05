@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: agentgate
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: AUTH0_DOMAIN
+        sync: false
+      - key: AUTH0_CLIENT_ID
+        sync: false
+      - key: AUTH0_CLIENT_SECRET
+        sync: false
+      - key: AUTH0_AUDIENCE
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: STATIC_DIR
+        value: /app/static
+      - key: KANONIV_ROOT_KEY_PATH
+        value: /root/.kanoniv/root.key
