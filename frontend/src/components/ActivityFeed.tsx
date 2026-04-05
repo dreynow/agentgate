@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { cn, timeAgo } from '@/lib/utils';
+import { cn, timeAgo, shortDid } from '@/lib/utils';
 import { DECISION_COLORS } from '@/lib/constants';
 import type { ActivityEntry } from '@/lib/types';
 
@@ -54,6 +54,16 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ entries, limit = 20 
                   <div className="text-[9px] text-[#9C978E]">
                     <span className="font-semibold">Reason:</span> {entry.reason}
                   </div>
+                  {entry.agent_did && (
+                    <div className="text-[9px] text-[#9C978E] font-mono">
+                      <span className="font-semibold font-sans">Agent DID:</span> {shortDid(entry.agent_did)}
+                    </div>
+                  )}
+                  {entry.root_did && (
+                    <div className="text-[9px] text-[#9C978E] font-mono">
+                      <span className="font-semibold font-sans">Root DID:</span> {shortDid(entry.root_did)}
+                    </div>
+                  )}
                   {entry.scopes.length > 0 && (
                     <div className="text-[9px] text-[#9C978E]">
                       <span className="font-semibold">Scopes:</span> {entry.scopes.join(', ')}
@@ -62,6 +72,12 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ entries, limit = 20 
                   {entry.ttl_remaining != null && (
                     <div className="text-[9px] text-[#9C978E]">
                       <span className="font-semibold">TTL remaining:</span> {entry.ttl_remaining}s
+                    </div>
+                  )}
+                  {entry.provenance && (
+                    <div className="text-[9px] text-[#9C978E]">
+                      <span className="font-semibold">Provenance:</span>{' '}
+                      <span className="font-mono text-[8px] break-all">{entry.provenance.slice(0, 64)}...</span>
                     </div>
                   )}
                 </div>

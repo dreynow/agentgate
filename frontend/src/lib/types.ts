@@ -12,6 +12,9 @@ export interface Delegation {
   scopes: string[];
   ttl: string;
   token: string;
+  agent_did: string;
+  root_did: string;
+  chain_depth: number;
   created_at: string;
   status: 'active' | 'revoked';
   revoked_at?: string;
@@ -25,6 +28,10 @@ export interface ActivityEntry {
   reason: string;
   scopes: string[];
   ttl_remaining: number | null;
+  agent_did: string;
+  root_did: string;
+  chain_depth: number;
+  provenance: string;
 }
 
 export interface AgentExecResult {

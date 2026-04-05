@@ -19,3 +19,12 @@ export function timeAgo(dateStr: string): string {
 export function shortId(id: string): string {
   return id.length > 8 ? id.slice(0, 8) : id;
 }
+
+export function shortDid(did: string): string {
+  if (!did) return '';
+  // did:key:z6Mk... -> did:key:z6Mk...last4
+  if (did.length > 24) {
+    return did.slice(0, 20) + '...' + did.slice(-6);
+  }
+  return did;
+}

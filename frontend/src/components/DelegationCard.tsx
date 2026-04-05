@@ -1,6 +1,6 @@
 import React from 'react';
-import { Trash2, Clock, Bot } from 'lucide-react';
-import { cn, timeAgo } from '@/lib/utils';
+import { Trash2, Clock, Bot, Fingerprint, KeyRound } from 'lucide-react';
+import { cn, timeAgo, shortDid } from '@/lib/utils';
 import type { Delegation } from '@/lib/types';
 
 interface DelegationCardProps {
@@ -16,7 +16,7 @@ export const DelegationCard: React.FC<DelegationCardProps> = ({ delegation, onRe
       'rounded-lg bg-white border border-[#E8E5DE] px-3 py-2.5',
       isRevoked && 'opacity-50',
     )}>
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex items-center gap-2 mb-1.5">
         <Bot className="w-3.5 h-3.5 text-[#B08D3E]" />
         <span className="text-xs font-medium text-[#1A1814]">{delegation.agent_name}</span>
         <span className="flex items-center gap-1 text-[9px] text-[#9C978E] ml-auto">
@@ -24,6 +24,21 @@ export const DelegationCard: React.FC<DelegationCardProps> = ({ delegation, onRe
           {delegation.ttl}
         </span>
       </div>
+
+      {/* DIDs - cryptographic identity */}
+      {delegation.agent_did && (
+        <div className="mb-1.5 space-y-0.5">
+          <div className="flex items-center gap-1.5">
+            <Fingerprint className="w-2.5 h-2.5 text-[#9C978E]" />
+            <span className="text-[8px] text-[#9C978E] font-mono">agent: {shortDid(delegation.agent_did)}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <KeyRound className="w-2.5 h-2.5 text-[#9C978E]" />
+            <span className="text-[8px] text-[#9C978E] font-mono">root: {shortDid(delegation.root_did)}</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-1.5 flex-wrap">
         {delegation.scopes.map(scope => (
           <span

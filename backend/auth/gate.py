@@ -25,10 +25,27 @@ def double_gate(
         "agent_name": agent_name,
         "action": action,
         "decision": "ALLOWED" if result.get("valid") else "BLOCKED",
-        "reason": "Delegation verified" if result.get("valid") else f"Delegation invalid: {result}",
+        "reason": "Delegation verified - credentials released" if result.get("valid") else f"Delegation invalid: {result}",
         "scopes": result.get("scopes", []),
         "ttl_remaining": result.get("ttl_remaining"),
+        "agent_did": result.get("agent_did", ""),
+        "root_did": result.get("root_did", ""),
+        "chain_depth": result.get("chain_depth", 0),
     }
+
+    # Sign for provenance if allowed
+    if result.get("valid"):
+        try:
+            signature = sign_action(
+                action=action,
+                token=delegation_token,
+                target=agent_name,
+                result="allowed",
+            )
+            entry["provenance"] = signature
+        except Exception:
+            entry["provenance"] = ""
+
     activity_log.append(entry)
 
     if not result.get("valid"):

@@ -37,12 +37,17 @@ async def create(body: DelegationCreate):
             scopes=body.scopes,
             ttl=body.ttl,
         )
+        # Verify to extract DIDs from the cryptographic delegation
+        verification = verify_action(body.scopes[0], token)
         delegation = {
             "id": f"del_{len(_delegations) + 1}",
             "agent_name": body.agent_name,
             "scopes": body.scopes,
             "ttl": body.ttl,
             "token": token,
+            "agent_did": verification.get("agent_did", ""),
+            "root_did": verification.get("root_did", ""),
+            "chain_depth": verification.get("chain_depth", 0),
             "created_at": datetime.now(timezone.utc).isoformat(),
             "status": "active",
         }
