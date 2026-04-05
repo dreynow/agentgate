@@ -1,23 +1,20 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, Play, CheckCircle2, XCircle, AlertTriangle, LogIn, KeyRound, Shield } from 'lucide-react';
+import { Bot, Play, CheckCircle2, XCircle, AlertTriangle, LogIn, KeyRound, Shield, Fingerprint } from 'lucide-react';
 import { executeAgent } from '@/lib/api';
 import { useDelegations } from '@/hooks/useDelegations';
 import { useActivity } from '@/hooks/useActivity';
 import { useAuth } from '@/hooks/useAuth';
-import { cn } from '@/lib/utils';
-import { AGENT_SCOPES } from '@/lib/constants';
+import { cn, shortDid } from '@/lib/utils';
 import type { AgentExecResult } from '@/lib/types';
 
-const DEMO_ACTIONS: Record<string, { action: string; params: Record<string, string>; label: string }[]> = {
-  'support-agent': [
-    { action: 'github.issues.list', params: { repo: 'kanoniv/agent-auth' }, label: 'List issues' },
-    { action: 'github.issues.search', params: { query: 'is:open label:bug' }, label: 'Search bugs' },
-  ],
-  'deploy-agent': [
-    { action: 'github.releases.list', params: { repo: 'kanoniv/agent-auth' }, label: 'List releases' },
-    { action: 'github.releases.create', params: { repo: 'kanoniv/agent-auth', tag: 'v0.1.0', name: 'v0.1.0' }, label: 'Create release' },
-  ],
+// Map scopes to human-readable action labels and default params
+const ACTION_CONFIG: Record<string, { label: string; params: Record<string, string> }> = {
+  'github.issues.list': { label: 'List issues', params: { repo: 'kanoniv/agent-auth' } },
+  'github.issues.search': { label: 'Search bugs', params: { query: 'is:open label:bug' } },
+  'github.issues.get': { label: 'Get issue #1', params: { repo: 'kanoniv/agent-auth', number: '1' } },
+  'github.releases.list': { label: 'List releases', params: { repo: 'kanoniv/agent-auth' } },
+  'github.releases.create': { label: 'Create release', params: { repo: 'kanoniv/agent-auth', tag: 'v0.1.0', name: 'v0.1.0' } },
 };
 
 export const AgentsPage: React.FC = () => {
@@ -28,28 +25,27 @@ export const AgentsPage: React.FC = () => {
   const [lastResult, setLastResult] = useState<AgentExecResult | null>(null);
   const [manualToken, setManualToken] = useState('');
 
-  // Use Token Vault token if available, fall back to manual input
   const activeToken = githubToken || manualToken;
+
+  // Build agent list dynamically from active delegations
+  const activeDelegations = delegations.filter(d => d.status === 'active');
+  const agentNames = [...new Set(activeDelegations.map(d => d.agent_name))];
 
   const handleExecute = async (agentName: string, action: string, params: Record<string, string>) => {
     const delegation = delegations.find(d => d.agent_name === agentName && d.status === 'active');
     if (!delegation) {
       setLastResult({
-        success: false,
-        action,
-        agent: agentName,
+        success: false, action, agent: agentName,
         error: 'No active delegation found. Grant a delegation first.',
         decision: 'BLOCKED',
       });
       return;
     }
 
-    // Client-side scope check - instant BLOCKED for unauthorized actions
+    // Client-side scope check - instant BLOCKED
     if (!delegation.scopes.includes(action)) {
       setLastResult({
-        success: false,
-        action,
-        agent: agentName,
+        success: false, action, agent: agentName,
         error: `Action "${action}" not in delegation scope. Delegated scopes: [${delegation.scopes.join(', ')}]`,
         decision: 'BLOCKED',
       });
@@ -58,9 +54,7 @@ export const AgentsPage: React.FC = () => {
 
     if (!activeToken) {
       setLastResult({
-        success: false,
-        action,
-        agent: agentName,
+        success: false, action, agent: agentName,
         error: 'No GitHub token. Login with Auth0 to get a Token Vault token, or paste one manually.',
         decision: 'BLOCKED',
       });
@@ -156,65 +150,79 @@ export const AgentsPage: React.FC = () => {
         )}
       </div>
 
-      {/* Agent cards */}
-      {Object.entries(DEMO_ACTIONS).map(([agentName, actions]) => {
-        const delegation = delegations.find(d => d.agent_name === agentName && d.status === 'active');
-        const scopes = AGENT_SCOPES[agentName as keyof typeof AGENT_SCOPES] || [];
+      {/* Dynamic agent cards from delegations */}
+      {agentNames.length === 0 ? (
+        <div className="text-center py-12 text-[#9C978E] text-xs">
+          No agents yet. Go to Delegations to create an agent and grant it authority.
+        </div>
+      ) : (
+        agentNames.map(agentName => {
+          const delegation = activeDelegations.find(d => d.agent_name === agentName);
+          if (!delegation) return null;
 
-        return (
-          <motion.div
-            key={agentName}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl bg-white border border-[#E8E5DE] p-4"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Bot className="w-4 h-4 text-[#B08D3E]" />
-              <span className="text-sm font-semibold text-[#1A1814]">{agentName}</span>
-              {delegation ? (
+          return (
+            <motion.div
+              key={agentName}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl bg-white border border-[#E8E5DE] p-4"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Bot className="w-4 h-4 text-[#B08D3E]" />
+                <span className="text-sm font-semibold text-[#1A1814]">{agentName}</span>
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                   <Shield className="w-2.5 h-2.5 inline mr-0.5" />delegated
                 </span>
-              ) : (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-600 border border-red-500/20">
-                  no delegation
-                </span>
-              )}
-              {activeToken && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 border border-blue-500/20">
-                  <KeyRound className="w-2.5 h-2.5 inline mr-0.5" />credentials ready
-                </span>
-              )}
-            </div>
+                {activeToken && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                    <KeyRound className="w-2.5 h-2.5 inline mr-0.5" />credentials ready
+                  </span>
+                )}
+              </div>
 
-            <div className="flex items-center gap-1.5 flex-wrap mb-3">
-              {scopes.map(scope => (
-                <span key={scope} className="text-[9px] px-1.5 py-0.5 rounded bg-[#F0EDE6] text-[#6B6560]">
-                  {scope}
-                </span>
-              ))}
-            </div>
+              {/* Agent DID */}
+              {delegation.agent_did && (
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Fingerprint className="w-3 h-3 text-[#9C978E]" />
+                  <span className="text-[8px] font-mono text-[#9C978E]">{shortDid(delegation.agent_did)}</span>
+                </div>
+              )}
 
-            <div className="flex gap-2 flex-wrap">
-              {actions.map(({ action, params, label }) => (
-                <button
-                  key={action}
-                  onClick={() => handleExecute(agentName, action, params)}
-                  disabled={running !== null}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E8E5DE] text-xs font-medium text-[#6B6560] hover:border-emerald-500/30 hover:text-emerald-600 transition-colors disabled:opacity-50"
-                >
-                  {running === `${agentName}:${action}` ? (
-                    <div className="w-3 h-3 border-2 border-[#9C978E] border-t-emerald-600 rounded-full animate-spin" />
-                  ) : (
-                    <Play className="w-3 h-3" />
-                  )}
-                  {label}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        );
-      })}
+              {/* Scopes */}
+              <div className="flex items-center gap-1.5 flex-wrap mb-3">
+                {delegation.scopes.map(scope => (
+                  <span key={scope} className="text-[9px] px-1.5 py-0.5 rounded bg-[#F0EDE6] text-[#6B6560]">
+                    {scope}
+                  </span>
+                ))}
+              </div>
+
+              {/* Action buttons - generated from delegated scopes */}
+              <div className="flex gap-2 flex-wrap">
+                {delegation.scopes.map(scope => {
+                  const config = ACTION_CONFIG[scope];
+                  if (!config) return null;
+                  return (
+                    <button
+                      key={scope}
+                      onClick={() => handleExecute(agentName, scope, config.params)}
+                      disabled={running !== null}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E8E5DE] text-xs font-medium text-[#6B6560] hover:border-emerald-500/30 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                    >
+                      {running === `${agentName}:${scope}` ? (
+                        <div className="w-3 h-3 border-2 border-[#9C978E] border-t-emerald-600 rounded-full animate-spin" />
+                      ) : (
+                        <Play className="w-3 h-3" />
+                      )}
+                      {config.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          );
+        })
+      )}
 
       {/* Last result */}
       {lastResult && (

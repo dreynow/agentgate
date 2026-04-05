@@ -4,25 +4,32 @@ import { Shield, Plus } from 'lucide-react';
 import { DelegationCard } from '@/components/DelegationCard';
 import { useDelegations } from '@/hooks/useDelegations';
 import { createDelegation, revokeDelegation } from '@/lib/api';
-import { AGENT_SCOPES, EXPIRY_OPTIONS } from '@/lib/constants';
+import { EXPIRY_OPTIONS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+
+const ALL_SCOPES = [
+  'github.issues.list',
+  'github.issues.search',
+  'github.issues.get',
+  'github.releases.list',
+  'github.releases.create',
+];
 
 export const DelegationsPage: React.FC = () => {
   const { delegations, refetch } = useDelegations();
   const [showForm, setShowForm] = useState(false);
-  const [agentName, setAgentName] = useState('support-agent');
+  const [agentName, setAgentName] = useState('');
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
   const [ttl, setTtl] = useState('2h');
   const [creating, setCreating] = useState(false);
 
-  const availableScopes = AGENT_SCOPES[agentName as keyof typeof AGENT_SCOPES] || [];
-
   const handleCreate = async () => {
-    if (selectedScopes.length === 0) return;
+    if (!agentName.trim() || selectedScopes.length === 0) return;
     setCreating(true);
-    await createDelegation(agentName, selectedScopes, ttl);
+    await createDelegation(agentName.trim(), selectedScopes, ttl);
     setCreating(false);
     setShowForm(false);
+    setAgentName('');
     setSelectedScopes([]);
     refetch();
   };
@@ -60,8 +67,8 @@ export const DelegationsPage: React.FC = () => {
       </motion.div>
 
       <p className="text-xs text-[#6B6560]">
-        Kanoniv Agent Auth controls what each agent is authorized to do.
-        Delegations are cryptographically signed and time-bounded.
+        Create agents and grant them scoped, time-limited authority using Ed25519 cryptographic delegation.
+        Each agent gets a unique DID (Decentralized Identifier).
       </p>
 
       {/* Create form */}
@@ -71,34 +78,26 @@ export const DelegationsPage: React.FC = () => {
           animate={{ opacity: 1, height: 'auto' }}
           className="rounded-xl bg-white border border-[#B08D3E]/20 p-4 space-y-4"
         >
-          <div className="text-xs font-semibold text-[#1A1814]">New Delegation</div>
+          <div className="text-xs font-semibold text-[#1A1814]">Create Agent & Grant Delegation</div>
 
-          {/* Agent selector */}
+          {/* Agent name - free text */}
           <div>
-            <label className="text-[9px] font-semibold text-[#9C978E] uppercase tracking-wider mb-1 block">Agent</label>
-            <div className="flex gap-2">
-              {Object.keys(AGENT_SCOPES).map(name => (
-                <button
-                  key={name}
-                  onClick={() => { setAgentName(name); setSelectedScopes([]); }}
-                  className={cn(
-                    'px-3 py-1.5 rounded-lg text-xs border transition-colors',
-                    agentName === name
-                      ? 'bg-[#B08D3E]/10 text-[#B08D3E] border-[#B08D3E]/20'
-                      : 'border-[#E8E5DE] text-[#6B6560] hover:border-[#B08D3E]/20',
-                  )}
-                >
-                  {name}
-                </button>
-              ))}
-            </div>
+            <label className="text-[9px] font-semibold text-[#9C978E] uppercase tracking-wider mb-1 block">Agent Name</label>
+            <input
+              type="text"
+              value={agentName}
+              onChange={e => setAgentName(e.target.value)}
+              placeholder="e.g. triage-bot, release-manager, code-reviewer"
+              className="w-full px-3 py-2 text-xs bg-[#FAFAF8] border border-[#E8E5DE] rounded-lg text-[#1A1814] placeholder-[#9C978E] focus:border-[#B08D3E]/50 focus:outline-none"
+            />
+            <p className="text-[8px] text-[#9C978E] mt-1">A unique Ed25519 key pair and DID will be generated for this agent.</p>
           </div>
 
           {/* Scope selector */}
           <div>
             <label className="text-[9px] font-semibold text-[#9C978E] uppercase tracking-wider mb-1 block">Scopes</label>
             <div className="flex gap-1.5 flex-wrap">
-              {availableScopes.map(scope => (
+              {ALL_SCOPES.map(scope => (
                 <button
                   key={scope}
                   onClick={() => toggleScope(scope)}
@@ -113,7 +112,7 @@ export const DelegationsPage: React.FC = () => {
                 </button>
               ))}
               <button
-                onClick={() => setSelectedScopes(availableScopes.slice())}
+                onClick={() => setSelectedScopes(ALL_SCOPES.slice())}
                 className="text-[10px] px-2 py-1 rounded border border-[#E8E5DE] text-[#9C978E] hover:text-[#6B6560] transition-colors"
               >
                 Select all
@@ -123,7 +122,7 @@ export const DelegationsPage: React.FC = () => {
 
           {/* TTL selector */}
           <div>
-            <label className="text-[9px] font-semibold text-[#9C978E] uppercase tracking-wider mb-1 block">TTL</label>
+            <label className="text-[9px] font-semibold text-[#9C978E] uppercase tracking-wider mb-1 block">TTL (Time to Live)</label>
             <div className="flex gap-2">
               {EXPIRY_OPTIONS.map(opt => (
                 <button
@@ -145,7 +144,7 @@ export const DelegationsPage: React.FC = () => {
           {/* Submit */}
           <button
             onClick={handleCreate}
-            disabled={selectedScopes.length === 0 || creating}
+            disabled={!agentName.trim() || selectedScopes.length === 0 || creating}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#B08D3E] text-white text-xs font-bold hover:bg-[#C5A572] transition-colors disabled:opacity-50"
           >
             {creating ? (
@@ -153,7 +152,7 @@ export const DelegationsPage: React.FC = () => {
             ) : (
               <Shield className="w-3.5 h-3.5" />
             )}
-            {creating ? 'Creating...' : 'Grant Delegation'}
+            {creating ? 'Creating...' : 'Create Agent & Grant Delegation'}
           </button>
         </motion.div>
       )}
@@ -162,7 +161,7 @@ export const DelegationsPage: React.FC = () => {
       <div className="space-y-2">
         {delegations.length === 0 ? (
           <div className="text-center py-12 text-[#9C978E] text-xs">
-            No delegations yet. Grant authority to an agent to get started.
+            No agents yet. Create an agent and grant it authority to get started.
           </div>
         ) : (
           delegations.map(d => (

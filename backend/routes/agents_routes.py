@@ -8,9 +8,6 @@ from auth.gate import get_activity_log, get_stats
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 
-# Registered agents and their tokens
-_agent_tokens: dict[str, dict] = {}
-
 
 class AgentAction(BaseModel):
     action: str
@@ -19,34 +16,24 @@ class AgentAction(BaseModel):
     github_token: str = ""
 
 
-class RegisterAgent(BaseModel):
-    name: str
-    delegation_token: str
-    github_token: str = ""
-
-
-@router.post("/register")
-async def register_agent(body: RegisterAgent):
-    """Register an agent with its delegation token."""
-    _agent_tokens[body.name] = {
-        "delegation_token": body.delegation_token,
-        "github_token": body.github_token,
-    }
-    return {"status": "registered", "agent": body.name}
-
-
 @router.post("/{agent_name}/execute")
 async def execute_action(agent_name: str, body: AgentAction):
-    """Execute an agent action through the double gate."""
+    """Execute an agent action through the double gate.
+
+    Any agent name works - the agent type is inferred from the action scope.
+    """
     delegation_token = body.delegation_token
     github_token = body.github_token
 
-    if agent_name == "support-agent":
+    # Route to the right agent class based on the action
+    if body.action.startswith("github.issues."):
         agent = SupportAgent(delegation_token, github_token)
-    elif agent_name == "deploy-agent":
+        agent.name = agent_name  # Use the custom agent name
+    elif body.action.startswith("github.releases."):
         agent = DeployAgent(delegation_token, github_token)
+        agent.name = agent_name
     else:
-        raise HTTPException(status_code=404, detail=f"Unknown agent: {agent_name}")
+        raise HTTPException(status_code=400, detail=f"Unknown action scope: {body.action}")
 
     result = agent.execute(body.action, body.params)
     return result
