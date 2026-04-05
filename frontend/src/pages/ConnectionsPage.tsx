@@ -16,7 +16,7 @@ export const ConnectionsPage: React.FC = () => {
   const { isAuthenticated, login } = useAuth();
 
   const handleDisconnect = async (id: string) => {
-    await apiFetch(`/connections/${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/connections/${id}`, { method: 'DELETE' });
     refetch();
   };
 

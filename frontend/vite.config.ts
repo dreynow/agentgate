@@ -17,15 +17,7 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
-      '/connections': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/delegations': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/agents': {
+      '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },

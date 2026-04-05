@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from auth.auth0 import user_sessions
 
-router = APIRouter(prefix="/connections", tags=["connections"])
+router = APIRouter(prefix="/api/connections", tags=["connections"])
 
 
 @router.get("")

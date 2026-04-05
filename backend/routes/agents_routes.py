@@ -6,7 +6,7 @@ from agents.support import SupportAgent
 from agents.deploy import DeployAgent
 from auth.gate import get_activity_log, get_stats
 
-router = APIRouter(prefix="/agents", tags=["agents"])
+router = APIRouter(prefix="/api/agents", tags=["agents"])
 
 # Registered agents and their tokens
 _agent_tokens: dict[str, dict] = {}

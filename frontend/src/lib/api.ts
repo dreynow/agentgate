@@ -9,19 +9,19 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
 // Typed API helpers
 
 export async function fetchConnections() {
-  const resp = await apiFetch('/connections');
+  const resp = await apiFetch('/api/connections');
   const data = await resp.json();
   return data.connections;
 }
 
 export async function fetchDelegations() {
-  const resp = await apiFetch('/delegations');
+  const resp = await apiFetch('/api/delegations');
   const data = await resp.json();
   return data.delegations;
 }
 
 export async function createDelegation(agent_name: string, scopes: string[], ttl: string) {
-  const resp = await apiFetch('/delegations', {
+  const resp = await apiFetch('/api/delegations', {
     method: 'POST',
     body: JSON.stringify({ agent_name, scopes, ttl }),
   });
@@ -29,23 +29,23 @@ export async function createDelegation(agent_name: string, scopes: string[], ttl
 }
 
 export async function revokeDelegation(id: string) {
-  const resp = await apiFetch(`/delegations/${id}`, { method: 'DELETE' });
+  const resp = await apiFetch(`/api/delegations/${id}`, { method: 'DELETE' });
   return resp.json();
 }
 
 export async function fetchActivity(limit = 50) {
-  const resp = await apiFetch(`/agents/activity?limit=${limit}`);
+  const resp = await apiFetch(`/api/agents/activity?limit=${limit}`);
   const data = await resp.json();
   return data.entries;
 }
 
 export async function fetchStats() {
-  const resp = await apiFetch('/agents/stats');
+  const resp = await apiFetch('/api/agents/stats');
   return resp.json();
 }
 
 export async function executeAgent(agentName: string, action: string, params: Record<string, unknown>, delegationToken: string, githubToken: string) {
-  const resp = await apiFetch(`/agents/${agentName}/execute`, {
+  const resp = await apiFetch(`/api/agents/${agentName}/execute`, {
     method: 'POST',
     body: JSON.stringify({
       action,

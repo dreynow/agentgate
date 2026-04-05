@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from auth.kanoniv import create_delegation, verify_action
 
-router = APIRouter(prefix="/delegations", tags=["delegations"])
+router = APIRouter(prefix="/api/delegations", tags=["delegations"])
 
 # In-memory delegation store
 _delegations: list[dict] = []
