@@ -218,6 +218,23 @@ export const AgentsPage: React.FC = () => {
                     </button>
                   );
                 })}
+
+                {/* Out-of-scope test buttons - show BLOCKED enforcement */}
+                {Object.entries(ACTION_CONFIG)
+                  .filter(([scope]) => !delegation.scopes.includes(scope))
+                  .slice(0, 2)
+                  .map(([scope, config]) => (
+                    <button
+                      key={`oos-${scope}`}
+                      onClick={() => handleExecute(agentName, scope, config.params)}
+                      disabled={running !== null}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-400 hover:border-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                    >
+                      <XCircle className="w-3 h-3" />
+                      {config.label}
+                      <span className="text-[8px] opacity-60">out of scope</span>
+                    </button>
+                  ))}
               </div>
             </motion.div>
           );
