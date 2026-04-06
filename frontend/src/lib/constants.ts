@@ -22,18 +22,6 @@ export const DECISION_COLORS: Record<string, string> = {
   ERROR: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
 };
 
-export const AGENT_SCOPES = {
-  'support-agent': [
-    'github.issues.list',
-    'github.issues.search',
-    'github.issues.get',
-  ],
-  'deploy-agent': [
-    'github.releases.create',
-    'github.releases.list',
-  ],
-};
-
 export const EXPIRY_OPTIONS = [
   { label: '30 minutes', value: '30m' },
   { label: '1 hour', value: '1h' },

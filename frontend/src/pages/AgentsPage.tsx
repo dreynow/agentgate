@@ -8,14 +8,21 @@ import { useAuth } from '@/hooks/useAuth';
 import { cn, shortDid } from '@/lib/utils';
 import type { AgentExecResult } from '@/lib/types';
 
-// Map scopes to human-readable action labels and default params
-const ACTION_CONFIG: Record<string, { label: string; params: Record<string, string> }> = {
-  'github.issues.list': { label: 'List issues', params: { repo: 'kanoniv/agent-auth' } },
-  'github.issues.search': { label: 'Search bugs', params: { query: 'is:open label:bug' } },
-  'github.issues.get': { label: 'Get issue #1', params: { repo: 'kanoniv/agent-auth', number: '1' } },
-  'github.releases.list': { label: 'List releases', params: { repo: 'kanoniv/agent-auth' } },
-  'github.releases.create': { label: 'Create release', params: { repo: 'kanoniv/agent-auth', tag: 'v0.1.0', name: 'v0.1.0' } },
-};
+const DEFAULT_REPO = 'kanoniv/agent-auth';
+
+// Derive a readable label from a scope string: "github.issues.list" -> "List issues"
+function scopeLabel(scope: string): string {
+  const parts = scope.split('.');
+  if (parts.length < 2) return scope;
+  const verb = parts[parts.length - 1];
+  const resource = parts[parts.length - 2];
+  return `${verb.charAt(0).toUpperCase() + verb.slice(1)} ${resource}`;
+}
+
+// Derive default params from the scope string
+function scopeParams(scope: string): Record<string, string> {
+  return { repo: DEFAULT_REPO };
+}
 
 export const AgentsPage: React.FC = () => {
   const { delegations } = useDelegations();
@@ -199,39 +206,37 @@ export const AgentsPage: React.FC = () => {
 
               {/* Action buttons - generated from delegated scopes */}
               <div className="flex gap-2 flex-wrap">
-                {delegation.scopes.map(scope => {
-                  const config = ACTION_CONFIG[scope];
-                  if (!config) return null;
-                  return (
-                    <button
-                      key={scope}
-                      onClick={() => handleExecute(agentName, scope, config.params)}
-                      disabled={running !== null}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E8E5DE] text-xs font-medium text-[#6B6560] hover:border-emerald-500/30 hover:text-emerald-600 transition-colors disabled:opacity-50"
-                    >
-                      {running === `${agentName}:${scope}` ? (
-                        <div className="w-3 h-3 border-2 border-[#9C978E] border-t-emerald-600 rounded-full animate-spin" />
-                      ) : (
-                        <Play className="w-3 h-3" />
-                      )}
-                      {config.label}
-                    </button>
-                  );
-                })}
+                {delegation.scopes.map(scope => (
+                  <button
+                    key={scope}
+                    onClick={() => handleExecute(agentName, scope, scopeParams(scope))}
+                    disabled={running !== null}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E8E5DE] text-xs font-medium text-[#6B6560] hover:border-emerald-500/30 hover:text-emerald-600 transition-colors disabled:opacity-50"
+                  >
+                    {running === `${agentName}:${scope}` ? (
+                      <div className="w-3 h-3 border-2 border-[#9C978E] border-t-emerald-600 rounded-full animate-spin" />
+                    ) : (
+                      <Play className="w-3 h-3" />
+                    )}
+                    {scopeLabel(scope)}
+                  </button>
+                ))}
 
-                {/* Out-of-scope test buttons - show BLOCKED enforcement */}
-                {Object.entries(ACTION_CONFIG)
-                  .filter(([scope]) => !delegation.scopes.includes(scope))
+                {/* Out-of-scope test buttons - pick scopes from other agents */}
+                {activeDelegations
+                  .flatMap(d => d.scopes)
+                  .filter(scope => !delegation.scopes.includes(scope))
+                  .filter((scope, i, arr) => arr.indexOf(scope) === i)
                   .slice(0, 2)
-                  .map(([scope, config]) => (
+                  .map(scope => (
                     <button
                       key={`oos-${scope}`}
-                      onClick={() => handleExecute(agentName, scope, config.params)}
+                      onClick={() => handleExecute(agentName, scope, scopeParams(scope))}
                       disabled={running !== null}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-medium text-red-400 hover:border-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
                     >
                       <XCircle className="w-3 h-3" />
-                      {config.label}
+                      {scopeLabel(scope)}
                       <span className="text-[8px] opacity-60">out of scope</span>
                     </button>
                   ))}
