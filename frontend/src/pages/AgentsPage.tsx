@@ -21,6 +21,9 @@ function scopeLabel(scope: string): string {
 
 // Derive default params from the scope string
 function scopeParams(scope: string): Record<string, string> {
+  const verb = scope.split('.').pop() || '';
+  if (verb === 'search') return { query: `repo:${DEFAULT_REPO} is:open` };
+  if (verb === 'get') return { repo: DEFAULT_REPO, number: '1' };
   return { repo: DEFAULT_REPO };
 }
 
